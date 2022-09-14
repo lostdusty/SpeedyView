@@ -5,12 +5,12 @@ All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice,
-   this list of conditions and the following disclaimer.
+ 1. Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,9 +30,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"syscall"
 
 	"github.com/akamensky/argparse"
-	"github.com/jchv/go-webview-selector"
+	webview "github.com/jchv/go-webview2"
+	"github.com/jchv/go-webview2/webviewloader"
+	"github.com/melbahja/got"
 )
 
 var (
@@ -83,11 +87,42 @@ func main() {
 	createView()
 }
 
+func installView() {
+	webviewVersion, err := webviewloader.GetInstalledVersion() //Check if the runtime is installed calling GetInstalledVersion()
+	if err != nil {
+		log.Println("WebView2 was not detected. SpeedyView will now install it") //If it fails to get the version, the application will:
+		downloadWebview := got.New()
+		err := downloadWebview.Download("https://go.microsoft.com/fwlink/p/?LinkId=2124703", "MicrosoftEdgeWebview2Setup.exe") //1: Download the runtime installer from Microsoft Website
+
+		if err != nil {
+			log.Fatalln("Failed to download the WebView runtime, SpeedyView will exit now.", err) //Exits with status code 1 if fails to download.
+		}
+
+		log.Println("Download has been completed, SpeedyView will now install the downloaded file.") //2: Install the runtime using /silent and /install arguments
+		cmd := exec.Cmd{                                                                             //See https://docs.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution#online-only-deployment
+			Path:        "MicrosoftEdgeWebview2Setup.exe",
+			Args:        []string{"/silent", "/install"},
+			Stdout:      os.Stdout,
+			SysProcAttr: &syscall.SysProcAttr{HideWindow: true}, //This syscall attribute hides the console window that may appear.
+		}
+		err = cmd.Run() //Executes the command
+		if err != nil {
+			log.Fatalln("Failed to install WebView runtime, error returned by the installer:", err) //Exits with code 1 if fails to run the command.
+		}
+	}
+
+	log.Println("Got WebView version", webviewVersion) //Print the WebView version.
+}
+
 func createView() {
+
+	if I {
+		installView()
+	}
 
 	window := webview.New(D) //Set the value from the debug flag (defaults to false)
 	if window == nil {
-		log.Fatalln("Failed to load webview.")
+		log.Fatalln("Failed to load webview.\nIf the issue persist, use --install flag.")
 	}
 	defer window.Destroy()
 	window.SetTitle(T)      //Set the title value (default to SpeedyView)
