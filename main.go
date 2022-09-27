@@ -62,8 +62,8 @@ func main() {
 	if err != nil {
 		// In case of error print error and print usage
 		// This can also be done by passing -h or --help flags
-		fmt.Print(parser.Usage(err))
-		os.Exit(1)
+		log.Fatalln(parser.Usage(err))
+		
 	}
 	// Convert the pointers to global variables
 	U = fmt.Sprint(*u)
